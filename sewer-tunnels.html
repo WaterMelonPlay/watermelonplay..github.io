@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>💩 SEWER TUNNELS — Survive the Depths</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0500;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'VT323', monospace;
+  }
+
+  #gameWrapper {
+    position: relative;
+    width: 800px;
+    height: 600px;
+  }
+
+  #gameCanvas {
+    display: block;
+    image-rendering: pixelated;
+    border: 3px solid #5c3a00;
+    box-shadow: 0 0 40px #8b4513, 0 0 80px #3d1a00;
+    cursor: none;
+  }
+
+  #hud {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  #healthBar {
+    position: absolute;
+    top: 12px; left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #healthLabel {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #ff4444;
+    text-shadow: 0 0 8px #ff0000;
+  }
+  #healthFill {
+    width: 120px; height: 14px;
+    background: #1a0000;
+    border: 2px solid #ff4444;
+    position: relative;
+    overflow: hidden;
+  }
+  #healthInner {
+    height: 100%;
+    background: linear-gradient(90deg, #aa0000, #ff4444);
+    transition: width 0.15s;
+    box-shadow: 0 0 6px #ff4444;
+  }
+
+  #ammoDisplay {
+    position: absolute;
+    top: 12px; right: 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #f4e04d;
+    text-shadow: 0 0 8px #f4e04d;
+    text-align: right;
+  }
+
+  #armorDisplay {
+    position: absolute;
+    top: 38px; left: 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #aaaaee;
+    text-shadow: 0 0 6px #aaaaee;
+    display: flex;
+    gap: 6px;
+  }
+
+  #scoreDisplay {
+    position: absolute;
+    bottom: 12px; right: 12px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #88ff88;
+    text-shadow: 0 0 8px #44ff44;
+  }
+
+  #crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px; height: 20px;
+    pointer-events: none;
+  }
+  #crosshair::before, #crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(255,255,100,0.9);
+    box-shadow: 0 0 4px #ffff00;
+  }
+  #crosshair::before { width: 2px; height: 100%; left: 50%; top: 0; transform: translateX(-50%); }
+  #crosshair::after  { width: 100%; height: 2px; top: 50%; left: 0; transform: translateY(-50%); }
+
+  #messages {
+    position: absolute;
+    bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    color: #ffdd55;
+    text-shadow: 0 0 12px #ffaa00, 2px 2px 0 #000;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+
+  #overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    z-index: 10;
+  }
+
+  #overlay h1 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: #8b4513;
+    text-shadow: 0 0 20px #8b2500, 3px 3px 0 #000;
+    text-align: center;
+    line-height: 1.6;
+  }
+  #overlay .sub {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: #ccaa55;
+    text-align: center;
+    line-height: 1.5;
+  }
+  #startBtn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    background: #5c2800;
+    color: #ffcc44;
+    border: 3px solid #ffcc44;
+    padding: 12px 28px;
+    cursor: pointer;
+    text-shadow: 0 0 8px #ffaa00;
+    box-shadow: 0 0 20px #ffaa0066;
+    transition: all 0.15s;
+    animation: pulse 1.4s infinite;
+  }
+  #startBtn:hover { background: #7a3800; box-shadow: 0 0 30px #ffaa00aa; }
+  @keyframes pulse {
+    0%,100%{ box-shadow: 0 0 12px #ffaa0066; }
+    50%{ box-shadow: 0 0 28px #ffaa00cc; }
+  }
+
+  #deathOverlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(80,0,0,0.88);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    z-index: 10;
+  }
+  #deathOverlay h2 {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: #ff2222;
+    text-shadow: 0 0 20px #ff0000;
+    animation: flicker 0.4s infinite;
+  }
+  @keyframes flicker { 0%,100%{opacity:1} 50%{opacity:0.7} }
+  #deathScore {
+    font-family: 'VT323', monospace;
+    font-size: 30px;
+    color: #ffdd55;
+    text-shadow: 0 0 10px #ffaa00;
+  }
+  #restartBtn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    background: #3a0000;
+    color: #ff8888;
+    border: 2px solid #ff8888;
+    padding: 10px 22px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s;
+  }
+  #restartBtn:hover { background: #5a0000; }
+
+  #controls {
+    position: absolute;
+    bottom: 10px; left: 10px;
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    color: #665544;
+    line-height: 1.4;
+  }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <div id="hud">
+    <div id="healthBar">
+      <div id="healthLabel">HP</div>
+      <div id="healthFill"><div id="healthInner" style="width:100%"></div></div>
+    </div>
+    <div id="armorDisplay" id="armorDisplay">
+      <span id="helmetStatus">🪖❌</span>
+      <span id="chestStatus">🦺❌</span>
+    </div>
+    <div id="ammoDisplay">
+      🥔 <span id="ammoCount">12</span>/∞<br>
+      🍚 x<span id="riceCount">0</span>
+    </div>
+    <div id="scoreDisplay">SCORE: <span id="scoreVal">0</span></div>
+    <div id="crosshair"></div>
+    <div id="messages"></div>
+  </div>
+
+  <div id="overlay">
+    <h1>💩 Дерьмо<br>Туннели 💩</h1>
+    <div class="sub">
+      Выживи в бесконечном лабиринте<br>
+      Чумные крысы атакуют!<br>
+      🥔 Картофельная пушка • 🍚 Рис-хилка<br>
+      📦 Картонный нагрудник • 🎩 Фольга-шапка
+    </div>
+    <button id="startBtn" onclick="startGame()">▶ НАЧАТЬ ИГРУ</button>
+    <div style="font-family:'VT323';font-size:16px;color:#554433;text-align:center;">
+      WASD / ←→ = движение • МЫШЬ = поворот камеры<br>
+      ЛКМ = стрелять • E = подобрать
+    </div>
+  </div>
+
+  <div id="deathOverlay">
+    <h2>💀 ТЫ СДОХ 💀</h2>
+    <div id="deathScore"></div>
+    <button id="restartBtn" onclick="startGame()">↺ СНОВА</button>
+  </div>
+
+  <div id="controls">WASD / ←→ = движение | МЫШЬ = камера | ЛКМ = пуля | E = подобрать</div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = 800, H = 600;
+
+// ── MAP GENERATOR ──────────────────────────────────────────────────────────
+const MSIZE = 32;
+let map = [];
+
+function generateMap() {
+  map = [];
+  for (let y = 0; y < MSIZE; y++) {
+    map[y] = [];
+    for (let x = 0; x < MSIZE; x++) map[y][x] = 1;
+  }
+  // Recursive backtracker maze
+  function carve(cx, cy) {
+    const dirs = [[0,-2],[2,0],[0,2],[-2,0]].sort(()=>Math.random()-0.5);
+    for (let [dx,dy] of dirs) {
+      const nx = cx+dx, ny = cy+dy;
+      if (nx>0&&ny>0&&nx<MSIZE-1&&ny<MSIZE-1&&map[ny][nx]===1) {
+        map[cy+dy/2][cx+dx/2] = 0;
+        map[ny][nx] = 0;
+        carve(nx,ny);
+      }
+    }
+  }
+  map[1][1] = 0;
+  carve(1,1);
+  // Open extra passages for feel
+  for (let i = 0; i < 60; i++) {
+    let x = 1+Math.floor(Math.random()*(MSIZE-2));
+    let y = 1+Math.floor(Math.random()*(MSIZE-2));
+    if (map[y][x] === 1) map[y][x] = 0;
+  }
+}
+
+function isWall(x, y) {
+  const mx = Math.floor(x), my = Math.floor(y);
+  if (mx < 0 || my < 0 || mx >= MSIZE || my >= MSIZE) return true;
+  return map[my][mx] === 1;
+}
+
+// ── PLAYER ─────────────────────────────────────────────────────────────────
+let player = {};
+let keys = {};
+let mouseX = 0;
+let bullets = [];
+let entities = []; // rats + items
+let score = 0;
+let gameRunning = false;
+let animFrame;
+let lastTime = 0;
+let msgTimer = 0;
+let shootCooldown = 0;
+let flashRed = 0;
+
+function resetPlayer() {
+  player = {
+    x: 1.5, y: 1.5,
+    angle: 0,
+    hp: 100, maxHp: 100,
+    ammo: 12, rice: 0,
+    hasHelmet: false, hasChest: false,
+    armorHp: 0
+  };
+}
+
+// ── RAYCASTING ─────────────────────────────────────────────────────────────
+const FOV = Math.PI / 3;
+const HALF_H = H / 2;
+const MAX_DEPTH = 20;
+
+// Brown wall textures (generated once)
+const wallTexW = 64, wallTexH = 64;
+const wallTexCanvas = document.createElement('canvas');
+wallTexCanvas.width = wallTexW; wallTexCanvas.height = wallTexH;
+const wctx = wallTexCanvas.getContext('2d');
+(function buildWallTex() {
+  // Brown brick-ish procedural texture
+  for (let y = 0; y < wallTexH; y++) {
+    for (let x = 0; x < wallTexW; x++) {
+      const noise = Math.random() * 30 - 15;
+      const bx = Math.floor(x / 8), by = Math.floor(y / 16);
+      const mortar = (y % 16 < 2) || (x % 8 < 2 && (by % 2 === 0 ? x % 16 < 2 : (x+8) % 16 < 2));
+      let r = mortar ? 40 + noise : 100 + noise;
+      let g = mortar ? 25 + noise : 55 + noise;
+      let b = mortar ? 10 + noise : 20 + noise;
+      wctx.fillStyle = `rgb(${r|0},${g|0},${b|0})`;
+      wctx.fillRect(x, y, 1, 1);
+    }
+  }
+})();
+const wallTexImageData = wctx.getImageData(0, 0, wallTexW, wallTexH);
+
+function castRays() {
+  const imgData = ctx.createImageData(W, H);
+  const buf = imgData.data;
+
+  // Floor & ceiling
+  for (let y = 0; y < H; y++) {
+    const isCeil = y < HALF_H;
+    const rowDist = isCeil
+      ? (0.5 * H) / (HALF_H - y + 0.001)
+      : (0.5 * H) / (y - HALF_H + 0.001);
+    const dx = Math.cos(player.angle - FOV/2) * rowDist;
+    const dy = Math.sin(player.angle - FOV/2) * rowDist;
+    const stepX = (Math.cos(player.angle + FOV/2) - Math.cos(player.angle - FOV/2)) * rowDist / W;
+    const stepY = (Math.sin(player.angle + FOV/2) - Math.sin(player.angle - FOV/2)) * rowDist / W;
+    let fx = player.x + dx, fy = player.y + dy;
+    for (let x = 0; x < W; x++) {
+      const tx = ((fx * 8) % 8 + 8) % 8 | 0;
+      const ty = ((fy * 8) % 8 + 8) % 8 | 0;
+      const shade = isCeil ? 0.25 : 0.5;
+      const noise = ((tx * 7 + ty * 13) % 32) / 32 * 0.15;
+      const base = (isCeil ? 0.08 : 0.22) + noise;
+      const idx = (y * W + x) * 4;
+      buf[idx]   = (isCeil ? 30 : 55) * (base * 3);
+      buf[idx+1] = (isCeil ? 18 : 35) * (base * 3);
+      buf[idx+2] = (isCeil ? 5  : 10) * (base * 3);
+      buf[idx+3] = 255;
+      fx += stepX; fy += stepY;
+    }
+  }
+
+  // Walls — proper DDA raycaster (fixes texture stretching at close range)
+  const zBuffer = new Float32Array(W);
+
+  for (let px = 0; px < W; px++) {
+    const camX = (2 * px / W) - 1;
+    const rdx = Math.cos(player.angle + Math.atan(camX * Math.tan(FOV / 2)));
+    const rdy = Math.sin(player.angle + Math.atan(camX * Math.tan(FOV / 2)));
+
+    let mapX = Math.floor(player.x);
+    let mapY = Math.floor(player.y);
+
+    const deltaDistX = Math.abs(rdx) < 1e-10 ? 1e30 : Math.abs(1 / rdx);
+    const deltaDistY = Math.abs(rdy) < 1e-10 ? 1e30 : Math.abs(1 / rdy);
+
+    let stepX, stepY, sideDistX, sideDistY;
+    if (rdx < 0) { stepX = -1; sideDistX = (player.x - mapX) * deltaDistX; }
+    else          { stepX =  1; sideDistX = (mapX + 1 - player.x) * deltaDistX; }
+    if (rdy < 0) { stepY = -1; sideDistY = (player.y - mapY) * deltaDistY; }
+    else          { stepY =  1; sideDistY = (mapY + 1 - player.y) * deltaDistY; }
+
+    let side = 0;
+    let hit = false;
+    for (let s = 0; s < 64 && !hit; s++) {
+      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; }
+      else                        { sideDistY += deltaDistY; mapY += stepY; side = 1; }
+      if (mapX >= 0 && mapY >= 0 && mapX < MSIZE && mapY < MSIZE && map[mapY][mapX] === 1) hit = true;
+    }
+
+    const perpWallDist = side === 0
+      ? (mapX - player.x + (1 - stepX) / 2) / rdx
+      : (mapY - player.y + (1 - stepY) / 2) / rdy;
+
+    const wallH = (H / perpWallDist) | 0;
+    const wallTop = Math.max(0, ((H - wallH) >> 1));
+    const wallBot = Math.min(H - 1, ((H + wallH) >> 1));
+
+    let wallHitX;
+    if (side === 0) wallHitX = player.y + perpWallDist * rdy;
+    else            wallHitX = player.x + perpWallDist * rdx;
+    wallHitX -= Math.floor(wallHitX);
+
+    let texX = (wallHitX * wallTexW) | 0;
+    if (side === 0 && rdx > 0) texX = wallTexW - texX - 1;
+    if (side === 1 && rdy < 0) texX = wallTexW - texX - 1;
+    texX = Math.max(0, Math.min(wallTexW - 1, texX));
+
+    const wd = wallTexImageData.data;
+    const bright = (side === 1 ? 0.55 : 0.9) * Math.max(0.05, 1 - perpWallDist / MAX_DEPTH);
+
+    zBuffer[px] = perpWallDist;
+
+    // texStep: how much to advance in texture per screen pixel
+    const texStep = wallTexH / wallH;
+    // starting texture Y (accounting for clipped top)
+    let texPos = wallTop > 0 ? 0 : ((H - wallH) / 2 * -1) * texStep;
+
+    for (let py = wallTop; py <= wallBot; py++) {
+      const ty = Math.max(0, Math.min(wallTexH - 1, texPos | 0));
+      texPos += texStep;
+      const ti = (ty * wallTexW + texX) * 4;
+      const idx = (py * W + px) * 4;
+      buf[idx]   = (wd[ti]   * bright) | 0;
+      buf[idx+1] = (wd[ti+1] * bright) | 0;
+      buf[idx+2] = (wd[ti+2] * bright) | 0;
+      buf[idx+3] = 255;
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  return zBuffer;
+}
+
+// ── ENTITIES ───────────────────────────────────────────────────────────────
+function spawnEntities() {
+  entities = [];
+  // Rats
+  for (let i = 0; i < 14; i++) spawnRat();
+  // Items
+  for (let i = 0; i < 10; i++) spawnItem('rice');
+  for (let i = 0; i < 3; i++) spawnItem('helmet');
+  for (let i = 0; i < 3; i++) spawnItem('chest');
+  for (let i = 0; i < 5; i++) spawnItem('ammo');
+}
+
+function randFreeCell() {
+  for (let attempt = 0; attempt < 200; attempt++) {
+    const x = 1.5 + Math.floor(Math.random() * (MSIZE-2));
+    const y = 1.5 + Math.floor(Math.random() * (MSIZE-2));
+    if (!isWall(x, y) && (Math.abs(x-player.x) > 3 || Math.abs(y-player.y) > 3))
+      return {x, y};
+  }
+  return {x: 5.5, y: 5.5};
+}
+
+function spawnRat() {
+  const pos = randFreeCell();
+  entities.push({
+    type: 'rat',
+    x: pos.x, y: pos.y,
+    hp: 25 + Math.random()*15 | 0,
+    speed: 0.8 + Math.random()*0.5,
+    state: 'roam',
+    angle: Math.random()*Math.PI*2,
+    roamTimer: Math.random()*3,
+    attackTimer: 0,
+    hitFlash: 0
+  });
+}
+
+function spawnItem(type) {
+  const pos = randFreeCell();
+  entities.push({ type, x: pos.x, y: pos.y, bobOffset: Math.random()*Math.PI*2 });
+}
+
+// ── SPRITE RENDERING ───────────────────────────────────────────────────────
+function drawSprites(zBuffer, dt) {
+  const sprites = [];
+
+  for (const e of entities) {
+    const dx = e.x - player.x;
+    const dy = e.y - player.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist > MAX_DEPTH - 1) continue;
+    const angle = Math.atan2(dy, dx) - player.angle;
+    let a = angle;
+    while (a > Math.PI) a -= Math.PI*2;
+    while (a < -Math.PI) a += Math.PI*2;
+    if (Math.abs(a) > FOV * 0.75) continue;
+    sprites.push({e, dist, angle: a});
+  }
+
+  sprites.sort((a,b) => b.dist - a.dist);
+
+  for (const {e, dist, angle} of sprites) {
+    const screenX = (W/2) + Math.tan(angle) * (W / (2 * Math.tan(FOV/2)));
+    const spriteH = Math.min(H*1.5, (H / dist) | 0);
+    const spriteW = spriteH;
+    const startX = (screenX - spriteW/2) | 0;
+    const startY = ((H - spriteH) / 2) | 0;
+    const fog = Math.max(0, 1 - dist / MAX_DEPTH) * Math.min(1, 3/dist);
+
+    // Check occlusion roughly
+    let visible = false;
+    for (let px = Math.max(0, startX); px < Math.min(W, startX+spriteW); px += 4) {
+      if (zBuffer[px] > dist) { visible = true; break; }
+    }
+    if (!visible) continue;
+
+    if (e.type === 'rat') {
+      drawRat(e, startX, startY, spriteW, spriteH, fog, dist, zBuffer);
+    } else {
+      drawItem(e, startX, startY, spriteW, spriteH, fog, dist, zBuffer);
+    }
+  }
+}
+
+function drawRat(e, sx, sy, sw, sh, fog, dist, zBuf) {
+  const t = Date.now() / 1000;
+  const legAnim = Math.sin(t * 12) * (sh * 0.08);
+  const bw = sw | 0, bh = sh | 0;
+
+  for (let px = sx; px < sx + bw; px++) {
+    if (px < 0 || px >= W) continue;
+    if (zBuf[px] < dist) continue;
+    const u = (px - sx) / bw;
+    for (let py = sy; py < sy + bh; py++) {
+      if (py < 0 || py >= H) continue;
+      const v = (py - sy) / bh;
+
+      // Rat body silhouette
+      let alpha = 0;
+      const cx = u - 0.5, cy = v - 0.6;
+      // body ellipse
+      const bodyD = (cx/(0.28))*(cx/(0.28)) + ((cy-0.05)/(0.18))*((cy-0.05)/(0.18));
+      // head circle
+      const hx = u-0.5, hy = v - 0.78;
+      const headD = (hx/0.15)*(hx/0.15) + (hy/0.13)*(hy/0.13);
+      // tail
+      const tailX = Math.abs(u - 0.82), tailY = v - 0.55;
+      const inTail = tailX < 0.04 && tailY > -0.08 && tailY < 0.12;
+      // legs
+      const legY = v - 0.45;
+      const inLeg = (Math.abs(u-0.35) < 0.06 || Math.abs(u-0.65) < 0.06) && legY > 0 && legY < 0.18 + legAnim/sh;
+
+      let r=0,g=0,b=0,a=0;
+      if (bodyD < 1) {
+        const shade = 0.6 + 0.4*(1-bodyD);
+        r = e.hitFlash > 0 ? (200*fog*shade|0) : (110*fog*shade|0);
+        g = e.hitFlash > 0 ? (50*fog*shade|0)  : (70*fog*shade|0);
+        b = e.hitFlash > 0 ? (50*fog*shade|0)  : (50*fog*shade|0);
+        a = 255;
+      } else if (headD < 1) {
+        r = e.hitFlash > 0 ? (180*fog|0) : (90*fog|0);
+        g = e.hitFlash > 0 ? (40*fog|0)  : (55*fog|0);
+        b = e.hitFlash > 0 ? (40*fog|0)  : (40*fog|0);
+        a = 255;
+        // Eyes
+        if (Math.abs(hx-0.06) < 0.04 && Math.abs(hy+0.03) < 0.04) { r=255; g=0; b=0; a=255; }
+        if (Math.abs(hx+0.06) < 0.04 && Math.abs(hy+0.03) < 0.04) { r=255; g=0; b=0; a=255; }
+      } else if (inTail) {
+        r=(80*fog|0); g=(50*fog|0); b=(40*fog|0); a=200;
+      } else if (inLeg) {
+        r=(80*fog|0); g=(50*fog|0); b=(40*fog|0); a=255;
+      }
+
+      if (a > 0) {
+        const idx = (py * W + px) * 4;
+        ctx.fillStyle = `rgba(${r},${g},${b},${a/255})`;
+        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+  }
+
+  // HP bar
+  if (dist < 8) {
+    const barW = Math.max(20, sw * 0.7);
+    const bx = sx + (sw - barW)/2;
+    const by = sy - 8;
+    ctx.fillStyle = '#300';
+    ctx.fillRect(bx, by, barW, 5);
+    ctx.fillStyle = '#f44';
+    ctx.fillRect(bx, by, barW * (e.hp/40), 5);
+  }
+}
+
+function drawItem(e, sx, sy, sw, sh, fog, dist, zBuf) {
+  const t = Date.now() / 1000;
+  const bob = Math.sin(t * 2 + e.bobOffset) * 5;
+  const adjustedSy = sy + bob;
+  const cX = sx + sw/2, cY = adjustedSy + sh/2;
+  const s = sh * 0.3;
+
+  let ocluded = true;
+  for (let px = Math.max(0,sx|0); px < Math.min(W,(sx+sw)|0); px += 3) {
+    if (zBuf[px] > dist) { ocluded = false; break; }
+  }
+  if (ocluded) return;
+
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, fog * 1.5);
+  ctx.shadowBlur = 15;
+
+  if (e.type === 'rice') {
+    ctx.shadowColor = '#88ff88';
+    ctx.font = `${s*1.8|0}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🍚', cX, cY);
+  } else if (e.type === 'helmet') {
+    ctx.shadowColor = '#ccccff';
+    ctx.font = `${s*1.8|0}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎩', cX, cY);
+  } else if (e.type === 'chest') {
+    ctx.shadowColor = '#aa8855';
+    ctx.font = `${s*1.8|0}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📦', cX, cY);
+  } else if (e.type === 'ammo') {
+    ctx.shadowColor = '#ffee44';
+    ctx.font = `${s*1.8|0}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🥔', cX, cY);
+  }
+  ctx.restore();
+}
+
+// ── WEAPON RENDERING ───────────────────────────────────────────────────────
+let weaponBob = 0, weaponShoot = 0;
+
+function drawWeapon() {
+  const t = Date.now() / 1000;
+  weaponBob = Math.sin(t * 6) * 6;
+  const wx = W/2 - 80 + Math.sin(t*3)*3;
+  const wy = H - 180 + weaponBob + (weaponShoot > 0 ? weaponShoot * 30 : 0);
+
+  ctx.save();
+  ctx.shadowBlur = 12;
+  ctx.shadowColor = '#aa6600';
+
+  // Barrel
+  ctx.fillStyle = '#888';
+  ctx.fillRect(wx + 60, wy + 20, 80, 16);
+  // Mouth
+  ctx.fillStyle = '#555';
+  ctx.beginPath();
+  ctx.arc(wx + 140, wy + 28, 10, 0, Math.PI*2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(wx, wy + 28, 70, 50);
+  ctx.fillStyle = '#a07820';
+  ctx.fillRect(wx + 5, wy + 30, 55, 10);
+
+  // Handle
+  ctx.fillStyle = '#7a5010';
+  ctx.fillRect(wx + 15, wy + 72, 28, 45);
+
+  // Potato drum
+  ctx.fillStyle = '#c8a040';
+  ctx.beginPath();
+  ctx.ellipse(wx + 55, wy + 65, 20, 22, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle = '#aa8530';
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.fillRect(wx+55 + Math.cos(a)*12 - 4, wy+65 + Math.sin(a)*15 - 4, 7, 7);
+  }
+
+  ctx.restore();
+
+  if (weaponShoot > 0) {
+    weaponShoot -= 0.15;
+    if (weaponShoot < 0) weaponShoot = 0;
+    // Muzzle flash
+    ctx.save();
+    ctx.globalAlpha = weaponShoot;
+    ctx.fillStyle = '#ffffaa';
+    ctx.shadowColor = '#ffff00';
+    ctx.shadowBlur = 30;
+    ctx.beginPath();
+    ctx.arc(wx + 145, wy + 28, 18, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── BULLETS ────────────────────────────────────────────────────────────────
+function shoot() {
+  if (player.ammo <= 0 || shootCooldown > 0) return;
+  player.ammo--;
+  weaponShoot = 1;
+  shootCooldown = 0.35;
+  bullets.push({
+    x: player.x, y: player.y,
+    dx: Math.cos(player.angle) * 12,
+    dy: Math.sin(player.angle) * 12,
+    life: 1
+  });
+  updateHUD();
+}
+
+function updateBullets(dt) {
+  for (let i = bullets.length-1; i >= 0; i--) {
+    const b = bullets[i];
+    b.x += b.dx * dt;
+    b.y += b.dy * dt;
+    b.life -= dt * 1.5;
+
+    if (b.life <= 0 || isWall(b.x, b.y)) {
+      bullets.splice(i,1);
+      continue;
+    }
+
+    // Hit rats
+    let hit = false;
+    for (let j = entities.length-1; j >= 0; j--) {
+      const e = entities[j];
+      if (e.type !== 'rat') continue;
+      const dx = b.x - e.x, dy = b.y - e.y;
+      if (dx*dx + dy*dy < 0.3) {
+        e.hp -= 20 + Math.random()*10 | 0;
+        e.hitFlash = 0.25;
+        hit = true;
+        if (e.hp <= 0) {
+          entities.splice(j,1);
+          score += 10;
+          updateHUD();
+          showMessage('💥 КРЫСА УНИЧТОЖЕНА!');
+          // Spawn new rat to keep pressure
+          setTimeout(spawnRat, 3000);
+        }
+        break;
+      }
+    }
+    if (hit) { bullets.splice(i,1); }
+  }
+}
+
+// ── AI RATS ────────────────────────────────────────────────────────────────
+function updateRats(dt) {
+  for (const e of entities) {
+    if (e.type !== 'rat') continue;
+
+    if (e.hitFlash > 0) e.hitFlash -= dt;
+
+    const dx = player.x - e.x;
+    const dy = player.y - e.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist < 12) {
+      // Chase
+      e.state = 'chase';
+      const angle = Math.atan2(dy, dx);
+      const nx = e.x + Math.cos(angle) * e.speed * dt;
+      const ny = e.y + Math.sin(angle) * e.speed * dt;
+      if (!isWall(nx, e.y)) e.x = nx;
+      if (!isWall(e.x, ny)) e.y = ny;
+
+      // Attack
+      if (dist < 0.8) {
+        e.attackTimer -= dt;
+        if (e.attackTimer <= 0) {
+          e.attackTimer = 1.2;
+          let dmg = 8;
+          if (player.armorHp > 0) {
+            const absorbed = Math.min(player.armorHp, dmg * 0.6 | 0);
+            dmg -= absorbed;
+            player.armorHp -= absorbed;
+            if (player.armorHp <= 0) {
+              player.hasHelmet = false;
+              player.hasChest = false;
+              showMessage('📦 БРОНЯ СЛОМАНА!');
+            }
+          }
+          player.hp -= dmg;
+          flashRed = 0.4;
+          if (player.hp <= 0) playerDied();
+          updateHUD();
+        }
+      }
+    } else {
+      // Roam
+      e.roamTimer -= dt;
+      if (e.roamTimer <= 0) {
+        e.angle = Math.random() * Math.PI * 2;
+        e.roamTimer = 1 + Math.random() * 2;
+      }
+      const nx = e.x + Math.cos(e.angle) * e.speed * 0.4 * dt;
+      const ny = e.y + Math.sin(e.angle) * e.speed * 0.4 * dt;
+      if (!isWall(nx, e.y)) e.x = nx; else e.angle += Math.PI + Math.random()-0.5;
+      if (!isWall(e.x, ny)) e.y = ny; else e.angle += Math.PI + Math.random()-0.5;
+    }
+  }
+}
+
+// ── ITEM PICKUP ────────────────────────────────────────────────────────────
+function tryPickup() {
+  for (let i = entities.length-1; i >= 0; i--) {
+    const e = entities[i];
+    if (e.type === 'rat') continue;
+    const dx = e.x - player.x, dy = e.y - player.y;
+    if (dx*dx + dy*dy < 0.6) {
+      if (e.type === 'rice') {
+        player.rice++;
+        const heal = 20;
+        player.hp = Math.min(player.maxHp, player.hp + heal);
+        entities.splice(i,1);
+        spawnItem('rice');
+        showMessage('🍚 +20 HP!');
+        score += 2;
+      } else if (e.type === 'helmet' && !player.hasHelmet) {
+        player.hasHelmet = true;
+        player.armorHp += 30;
+        entities.splice(i,1);
+        showMessage('🎩 ФОЛЬГА-ШАПКА НАДЕТА!');
+        score += 5;
+      } else if (e.type === 'chest' && !player.hasChest) {
+        player.hasChest = true;
+        player.armorHp += 50;
+        entities.splice(i,1);
+        showMessage('📦 КАРТОННЫЙ НАГРУДНИК НАДЕТ!');
+        score += 5;
+      } else if (e.type === 'ammo') {
+        player.ammo += 6;
+        entities.splice(i,1);
+        spawnItem('ammo');
+        showMessage('🥔 +6 КАРТОФЕЛИН!');
+      }
+      updateHUD();
+      return;
+    }
+  }
+}
+
+// ── PLAYER MOVEMENT ────────────────────────────────────────────────────────
+const MOVE_SPEED = 2.5;
+const TURN_SPEED = 2.0;
+
+function updatePlayer(dt) {
+  let dx = 0, dy = 0;
+  if (keys['w'] || keys['arrowup'])   { dx += Math.cos(player.angle)*MOVE_SPEED*dt; dy += Math.sin(player.angle)*MOVE_SPEED*dt; }
+  if (keys['s'] || keys['arrowdown']) { dx -= Math.cos(player.angle)*MOVE_SPEED*dt; dy -= Math.sin(player.angle)*MOVE_SPEED*dt; }
+  if (keys['a'] || keys['arrowleft']) { dx += Math.cos(player.angle-Math.PI/2)*MOVE_SPEED*dt; dy += Math.sin(player.angle-Math.PI/2)*MOVE_SPEED*dt; }
+  if (keys['d'] || keys['arrowright']){ dx -= Math.cos(player.angle-Math.PI/2)*MOVE_SPEED*dt; dy -= Math.sin(player.angle-Math.PI/2)*MOVE_SPEED*dt; }
+
+  const col = 0.25;
+  if (!isWall(player.x + dx, player.y)) player.x += dx;
+  if (!isWall(player.x, player.y + dy)) player.y += dy;
+
+  if (shootCooldown > 0) shootCooldown -= dt;
+
+  // Pickup hint
+  for (const e of entities) {
+    if (e.type === 'rat') continue;
+    const ddx = e.x - player.x, ddy = e.y - player.y;
+    if (ddx*ddx + ddy*ddy < 0.7) {
+      showPickupHint(e.type);
+      return;
+    }
+  }
+}
+
+// ── HUD ────────────────────────────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('healthInner').style.width = Math.max(0, (player.hp / player.maxHp * 100)) + '%';
+  document.getElementById('ammoCount').textContent = player.ammo;
+  document.getElementById('riceCount').textContent = player.rice;
+  document.getElementById('scoreVal').textContent = score;
+  document.getElementById('helmetStatus').textContent = player.hasHelmet ? '🎩✅' : '🎩❌';
+  document.getElementById('chestStatus').textContent = player.hasChest ? '📦✅' : '📦❌';
+}
+
+let pickupHintTimer = 0;
+function showPickupHint(type) {
+  const names = { rice:'🍚 [E] Съесть рис', helmet:'🎩 [E] Надеть шапку', chest:'📦 [E] Надеть нагрудник', ammo:'🥔 [E] Подобрать патроны' };
+  showMessage(names[type] || '[E] Подобрать');
+}
+
+let msgEl = document.getElementById('messages');
+let msgTimeout;
+function showMessage(txt) {
+  msgEl.textContent = txt;
+  msgEl.style.opacity = '1';
+  clearTimeout(msgTimeout);
+  msgTimeout = setTimeout(()=>{ msgEl.style.opacity='0'; }, 2000);
+}
+
+// ── MINIMAP ────────────────────────────────────────────────────────────────
+function drawMinimap() {
+  const ms = 4, ox = W - MSIZE*ms - 8, oy = 8;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(ox-2, oy-2, MSIZE*ms+4, MSIZE*ms+4);
+  for (let y = 0; y < MSIZE; y++) {
+    for (let x = 0; x < MSIZE; x++) {
+      ctx.fillStyle = map[y][x] ? '#5c2800' : '#1a0d00';
+      ctx.fillRect(ox + x*ms, oy + y*ms, ms, ms);
+    }
+  }
+  // Player dot
+  ctx.fillStyle = '#ffff00';
+  ctx.fillRect(ox + player.x*ms - 2, oy + player.y*ms - 2, 4, 4);
+  // Direction
+  ctx.strokeStyle = '#ffff00';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(ox + player.x*ms, oy + player.y*ms);
+  ctx.lineTo(ox + player.x*ms + Math.cos(player.angle)*8, oy + player.y*ms + Math.sin(player.angle)*8);
+  ctx.stroke();
+  // Rats
+  for (const e of entities) {
+    if (e.type !== 'rat') continue;
+    ctx.fillStyle = '#ff3300';
+    ctx.fillRect(ox + e.x*ms - 1, oy + e.y*ms - 1, 3, 3);
+  }
+}
+
+// ── GAME LOOP ──────────────────────────────────────────────────────────────
+function gameLoop(ts) {
+  if (!gameRunning) return;
+  const dt = Math.min(0.05, (ts - lastTime) / 1000);
+  lastTime = ts;
+
+  updatePlayer(dt);
+  updateRats(dt);
+  updateBullets(dt);
+
+  const zBuf = castRays();
+  drawSprites(zBuf, dt);
+  drawWeapon();
+  drawMinimap();
+
+  // Red flash on damage
+  if (flashRed > 0) {
+    ctx.fillStyle = `rgba(200,0,0,${flashRed * 0.4})`;
+    ctx.fillRect(0, 0, W, H);
+    flashRed -= dt * 2;
+  }
+
+  // Ambient drip effect (sewer atmosphere)
+  if (Math.random() < 0.003) {
+    const drops = Math.floor(Math.random()*3)+1;
+    for (let i=0;i<drops;i++) {
+      const dx = Math.random()*W, dy = Math.random()*20;
+      ctx.fillStyle = 'rgba(100,70,20,0.6)';
+      ctx.fillRect(dx, dy, 2, 8 + Math.random()*15);
+    }
+  }
+
+  animFrame = requestAnimationFrame(gameLoop);
+}
+
+// ── DEATH ──────────────────────────────────────────────────────────────────
+function playerDied() {
+  gameRunning = false;
+  cancelAnimationFrame(animFrame);
+  document.getElementById('deathScore').textContent = `Счёт: ${score} | Крыс убито: ${score/10|0}`;
+  document.getElementById('deathOverlay').style.display = 'flex';
+  document.exitPointerLock && document.exitPointerLock();
+}
+
+// ── START / RESTART ────────────────────────────────────────────────────────
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('deathOverlay').style.display = 'none';
+  generateMap();
+  resetPlayer();
+  score = 0;
+  bullets = [];
+  spawnEntities();
+  updateHUD();
+  gameRunning = true;
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+
+// ── INPUT ──────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (e.key.toLowerCase() === 'e') tryPickup();
+  if (e.key === ' ') shoot();
+});
+document.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+// Mouse look — works without pointer lock (iframe-safe)
+let lastMouseX = null;
+let mouseDown = false;
+
+canvas.addEventListener('mousedown', e => {
+  if (!gameRunning) return;
+  mouseDown = true;
+  lastMouseX = e.clientX;
+  // Try pointer lock but don't depend on it
+  try { canvas.requestPointerLock && canvas.requestPointerLock(); } catch(e) {}
+});
+
+canvas.addEventListener('mouseup', () => { mouseDown = false; });
+
+canvas.addEventListener('click', e => {
+  if (!gameRunning) return;
+  shoot();
+});
+
+document.addEventListener('mousemove', e => {
+  if (!gameRunning) return;
+  // Use movementX if pointer lock is active
+  if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
+    player.angle += e.movementX * 0.003;
+    return;
+  }
+  // Fallback: always rotate on any mouse move over canvas (no button hold needed)
+  if (lastMouseX !== null) {
+    const dx = e.clientX - lastMouseX;
+    player.angle += dx * 0.005;
+  }
+  lastMouseX = e.clientX;
+});
+
+canvas.addEventListener('mouseleave', () => { lastMouseX = null; });
+canvas.addEventListener('mouseenter', e => { lastMouseX = e.clientX; });
+
+// Touch support
+let touchStartX = null;
+canvas.addEventListener('touchstart', e => {
+  touchStartX = e.touches[0].clientX;
+  if (e.touches.length === 2) shoot();
+});
+canvas.addEventListener('touchmove', e => {
+  if (!gameRunning || touchStartX === null) return;
+  const dx = e.touches[0].clientX - touchStartX;
+  player.angle += dx * 0.005;
+  touchStartX = e.touches[0].clientX;
+  e.preventDefault();
+}, { passive: false });
+
+// Draw initial frame
+ctx.fillStyle = '#0a0500';
+ctx.fillRect(0, 0, W, H);
+</script>
+</body>
+</html>
